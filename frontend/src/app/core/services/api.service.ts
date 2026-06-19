@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Activity, CreateActivityDto, ActivityListResponse, ActivitySubType, ActivityType } from '../models/activity.model';
 import { DashboardData } from '../models/dashboard.model';
@@ -62,9 +63,19 @@ export class ApiService {
         if (val !== undefined) httpParams = httpParams.set(key, String(val));
       });
     }
-    return this.http.get<ApiResponse<ActivityListResponse>>(
+    return this.http.get<any>(
       `${this.baseUrl}/activities`,
       { headers: this.headers, params: httpParams }
+    ).pipe(
+      map((res) => ({
+        success: res.success,
+        data: {
+          data: res.data,
+          total: res.total,
+          limit: res.limit,
+          offset: res.offset,
+        },
+      }))
     );
   }
 

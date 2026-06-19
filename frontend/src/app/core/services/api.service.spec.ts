@@ -25,7 +25,7 @@ describe('ApiService', () => {
   });
 
   it('should get activities with correct headers and params', () => {
-    const mockResponse = { success: true, data: { data: [], total: 0, limit: 10, offset: 0 } };
+    const mockResponse = { success: true, data: [], total: 0, limit: 10, offset: 0 };
     service.getActivities({ limit: 10 }).subscribe((res) => {
       expect(res.success).toBeTrue();
       expect(res.data.total).toBe(0);

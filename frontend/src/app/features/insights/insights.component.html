@@ -93,7 +93,7 @@
 
     <!-- Improvement Actions -->
     <div class="card actions-section" *ngIf="data.improvementActions?.length">
-      <h2>🎯 Top Actions for {{ data.topEmissionSource | titlecase }}</h2>
+      <h2>🎯 {{ data.topEmissionSource === 'none' ? 'General Sustainability Actions' : 'Top Actions for ' + (data.topEmissionSource | titlecase) }}</h2>
       <ul class="actions-list" role="list">
         <li *ngFor="let action of data.improvementActions; let i = index" class="action-item" role="listitem">
           <span class="action-number" aria-hidden="true">{{ i + 1 }}</span>
