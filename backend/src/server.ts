@@ -8,7 +8,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 async function bootstrap(): Promise<void> {
   try {
     // Initialize database
-    initializeDatabase();
+    await initializeDatabase();
     logger.info('Database initialized successfully');
 
     // Create Express app

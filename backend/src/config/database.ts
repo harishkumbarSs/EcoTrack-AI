@@ -1,100 +1,96 @@
-import Database from 'better-sqlite3';
+import knex, { Knex } from 'knex';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../utils/logger';
 
-let db: Database.Database;
+let db: Knex;
 
-export function getDatabase(): Database.Database {
+export function getDatabase(): Knex {
   if (!db) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
   return db;
 }
 
-export function initializeDatabase(): void {
+export async function initializeDatabase(): Promise<void> {
   const dbPath = process.env.DB_PATH || './data/ecotrack.db';
   const dbDir = path.dirname(dbPath);
 
-  // Ensure data directory exists
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  db = new Database(dbPath);
+  db = knex({
+    client: 'sqlite3',
+    connection: { filename: dbPath },
+    useNullAsDefault: true,
+    pool: { min: 1, max: 1 },
+  });
 
-  // Enable WAL mode for better performance
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-
-  runMigrations();
+  await runMigrations();
   logger.info(`SQLite database connected at: ${dbPath}`);
 }
 
-function runMigrations(): void {
+async function runMigrations(): Promise<void> {
   const database = getDatabase();
 
-  database.exec(`
-    -- Activities table: stores all user activity entries
-    CREATE TABLE IF NOT EXISTS activities (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id  TEXT    NOT NULL,
-      type        TEXT    NOT NULL CHECK(type IN ('transport','electricity','food','waste')),
-      sub_type    TEXT    NOT NULL,
-      value       REAL    NOT NULL CHECK(value > 0),
-      unit        TEXT    NOT NULL,
-      co2e        REAL    NOT NULL CHECK(co2e >= 0),
-      date        TEXT    NOT NULL,
-      notes       TEXT    DEFAULT '',
-      created_at  TEXT    DEFAULT (datetime('now'))
-    );
+  // Activities
+  const hasActivities = await database.schema.hasTable('activities');
+  if (!hasActivities) {
+    await database.schema.createTable('activities', (table) => {
+      table.increments('id').primary();
+      table.string('session_id').notNullable().index();
+      table.string('type').notNullable();
+      table.string('sub_type').notNullable();
+      table.float('value').notNullable();
+      table.string('unit').notNullable();
+      table.float('co2e').notNullable();
+      table.string('date').notNullable().index();
+      table.string('notes').defaultTo('');
+      table.timestamp('created_at').defaultTo(database.fn.now());
+    });
+  }
 
-    CREATE INDEX IF NOT EXISTS idx_activities_session_date
-      ON activities(session_id, date);
+  // Goals
+  const hasGoals = await database.schema.hasTable('goals');
+  if (!hasGoals) {
+    await database.schema.createTable('goals', (table) => {
+      table.increments('id').primary();
+      table.string('session_id').notNullable().index();
+      table.float('target_kg_per_day').notNullable();
+      table.string('start_date').notNullable();
+      table.timestamp('created_at').defaultTo(database.fn.now());
+    });
+  }
 
-    CREATE INDEX IF NOT EXISTS idx_activities_type
-      ON activities(session_id, type);
-
-    -- Goals table: user's daily carbon reduction goal
-    CREATE TABLE IF NOT EXISTS goals (
-      id                INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id        TEXT    NOT NULL,
-      target_kg_per_day REAL    NOT NULL CHECK(target_kg_per_day > 0),
-      start_date        TEXT    NOT NULL,
-      created_at        TEXT    DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_goals_session
-      ON goals(session_id);
-
-    -- Achievements table: earned badges per session
-    CREATE TABLE IF NOT EXISTS achievements (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id TEXT    NOT NULL,
-      badge_id   TEXT    NOT NULL,
-      earned_at  TEXT    DEFAULT (datetime('now')),
-      UNIQUE(session_id, badge_id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_achievements_session
-      ON achievements(session_id);
-  `);
+  // Achievements
+  const hasAchievements = await database.schema.hasTable('achievements');
+  if (!hasAchievements) {
+    await database.schema.createTable('achievements', (table) => {
+      table.increments('id').primary();
+      table.string('session_id').notNullable().index();
+      table.string('badge_id').notNullable();
+      table.timestamp('earned_at').defaultTo(database.fn.now());
+      table.unique(['session_id', 'badge_id']);
+    });
+  }
 
   logger.info('Database migrations applied successfully');
 }
 
-// For testing: close and reset the database
-export function closeDatabase(): void {
+export async function closeDatabase(): Promise<void> {
   if (db) {
-    db.close();
-    db = undefined as unknown as Database.Database;
+    await db.destroy();
+    db = undefined as unknown as Knex;
   }
 }
 
-// For testing: use in-memory database
-export function initializeTestDatabase(): void {
-  db = new Database(':memory:');
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  runMigrations();
+export async function initializeTestDatabase(): Promise<void> {
+  db = knex({
+    client: 'sqlite3',
+    connection: { filename: ':memory:' },
+    useNullAsDefault: true,
+    pool: { min: 1, max: 1 },
+  });
+  await runMigrations();
 }
