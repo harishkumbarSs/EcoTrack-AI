@@ -1,0 +1,140 @@
+<section class="achievements-page" aria-label="Achievements and gamification board">
+  <app-loading-spinner *ngIf="loading" message="Loading achievements..."></app-loading-spinner>
+
+  <div *ngIf="error && !loading" class="card error-card animate-fade-in" role="alert">
+    <mat-icon class="error-icon">error</mat-icon>
+    <div class="error-content">
+      <h3>Error Loading Achievements</h3>
+      <p>{{ error }}</p>
+      <button class="btn-eco" (click)="load()">Try Again</button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && data" class="achievements-content animate-fade-in">
+    <!-- ─── Overview Section ────────────────────────────────────── -->
+    <div class="overview-grid">
+      <!-- Sustainability Score card -->
+      <div class="card score-card">
+        <div class="score-radial">
+          <svg class="radial-svg" viewBox="0 0 100 100">
+            <circle class="radial-bg" cx="50" cy="50" r="40"></circle>
+            <circle
+              class="radial-progress"
+              cx="50"
+              cy="50"
+              r="40"
+              [style.stroke-dashoffset]="251.2 - (251.2 * data.score.score) / 100"
+            ></circle>
+          </svg>
+          <div class="score-text">
+            <span class="score-val">{{ data.score.score }}</span>
+            <span class="score-max">/100</span>
+          </div>
+        </div>
+        <div class="score-details">
+          <h2>{{ data.score.label }}</h2>
+          <p class="score-message">{{ data.score.message }}</p>
+          <div class="percentile-badge">
+            Better than {{ data.score.percentile }}% of users
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="stats-panel">
+        <div class="card stat-box">
+          <div class="stat-icon-wrapper streak-bg">
+            <mat-icon>local_fire_department</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ data.streak }} Days</span>
+            <span class="stat-label">Logging Streak</span>
+          </div>
+        </div>
+
+        <div class="card stat-box">
+          <div class="stat-icon-wrapper savings-bg">
+            <mat-icon>eco</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ data.totalCo2eSaved | number:'1.0-1' }} kg</span>
+            <span class="stat-label">Total CO₂e Saved</span>
+          </div>
+        </div>
+
+        <div class="card stat-box">
+          <div class="stat-icon-wrapper logs-bg">
+            <mat-icon>assignment</mat-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ data.totalActivities }}</span>
+            <span class="stat-label">Activities Logged</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Next Badge Goal ────────────────────────────────────── -->
+    <div class="card next-badge-card" *ngIf="data.nextBadge">
+      <div class="next-badge-badge">NEXT GOAL</div>
+      <div class="next-badge-content">
+        <div class="next-badge-icon-container">
+          <span class="badge-icon-emoji grayscale">{{ getBadgeIcon(data.nextBadge) }}</span>
+        </div>
+        <div class="next-badge-info">
+          <h3>{{ data.nextBadge.name }}</h3>
+          <p class="next-badge-desc">{{ data.nextBadge.description }}</p>
+          <div class="next-badge-condition">
+            <mat-icon>info</mat-icon>
+            <span>Requirement: {{ data.nextBadge.condition }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Badges Showcase ────────────────────────────────────── -->
+    <div class="badges-showcase">
+      <div class="showcase-header">
+        <h2>🏆 Sustainability Badges</h2>
+        <span class="earned-count badge badge-success">
+          Earned: {{ data.earned.length }} / {{ data.allBadges.length }}
+        </span>
+      </div>
+
+      <div class="badges-grid">
+        <div
+          *ngFor="let badge of data.allBadges"
+          class="card badge-card"
+          [class.earned]="isBadgeEarned(badge.id)"
+          [attr.aria-label]="badge.name + ': ' + badge.description + (isBadgeEarned(badge.id) ? ' (Earned)' : ' (Locked)')"
+        >
+          <div class="badge-status-icon">
+            <mat-icon *ngIf="isBadgeEarned(badge.id)" class="earned-star">stars</mat-icon>
+            <mat-icon *ngIf="!isBadgeEarned(badge.id)" class="locked-padlock">lock_outline</mat-icon>
+          </div>
+
+          <div class="badge-icon-box">
+            <span class="badge-emoji" [class.grayscale]="!isBadgeEarned(badge.id)">
+              {{ getBadgeIcon(badge) }}
+            </span>
+          </div>
+
+          <h3 class="badge-name">{{ badge.name }}</h3>
+          <p class="badge-description">{{ badge.description }}</p>
+
+          <div class="badge-footer">
+            <span class="badge-category font-xs" [class]="'cat-' + badge.category">
+              {{ badge.category | uppercase }}
+            </span>
+            <span *ngIf="isBadgeEarned(badge.id)" class="earned-date">
+              Earned {{ getEarnedDate(badge.id) | date:'MMM d, y' }}
+            </span>
+            <span *ngIf="!isBadgeEarned(badge.id)" class="locked-requirement" [matTooltip]="badge.condition">
+              Locked
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,116 @@
+<section class="insights" aria-label="AI Sustainability Insights">
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <div *ngIf="!loading && data" class="insights-content animate-fade-in">
+
+    <!-- Weekly Summary -->
+    <div class="grid-3" style="margin-bottom:24px">
+      <div class="card stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" [class.positive]="data.weeklyReport.vsGlobalAverage <= 0">
+          {{ data.weeklyReport.totalCo2e | number:'1.1-1' }} kg
+        </div>
+        <div class="stat-label">This Week's Total</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-value">{{ data.weeklyReport.dailyAverage | number:'1.1-1' }} kg</div>
+        <div class="stat-label">Daily Average</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon" [class]="data.weeklyReport.vsGlobalAverage <= 0 ? 'positive' : ''">
+          {{ data.weeklyReport.vsGlobalAverage <= 0 ? '🌿' : '⚠️' }}
+        </div>
+        <div class="stat-value" [class.positive]="data.weeklyReport.vsGlobalAverage <= 0" [class.negative]="data.weeklyReport.vsGlobalAverage > 0">
+          {{ data.weeklyReport.vsGlobalAverage > 0 ? '+' : '' }}{{ data.weeklyReport.vsGlobalAverage | number:'1.1-1' }} kg
+        </div>
+        <div class="stat-label">vs Global Average</div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations-section">
+      <div class="section-header">
+        <h2>🤖 AI Recommendations</h2>
+        <div class="tab-pills" role="tablist">
+          <button role="tab" class="tab-pill" [class.active]="activeTab==='recommendations'" (click)="activeTab='recommendations'" [attr.aria-selected]="activeTab==='recommendations'">
+            Quick Wins ({{ quickWins.length }})
+          </button>
+          <button role="tab" class="tab-pill" [class.active]="activeTab==='actions'" (click)="activeTab='actions'" [attr.aria-selected]="activeTab==='actions'">
+            Long-Term ({{ longTermActions.length }})
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="activeTab==='recommendations'" class="rec-list" role="list">
+        <article
+          *ngFor="let rec of quickWins"
+          class="rec-card card animate-fade-in"
+          role="listitem"
+          [style.border-left-color]="getPriorityColor(rec.priority)"
+          [attr.aria-label]="rec.title + ': ' + rec.description"
+        >
+          <div class="rec-header">
+            <span class="rec-icon" aria-hidden="true">{{ rec.icon }}</span>
+            <div class="rec-meta">
+              <span class="rec-title">{{ rec.title }}</span>
+              <span class="rec-priority badge" [style.background]="getPriorityBg(rec.priority)" [style.color]="getPriorityColor(rec.priority)">
+                {{ rec.priority | titlecase }} Priority
+              </span>
+            </div>
+          </div>
+          <p class="rec-desc">{{ rec.description }}</p>
+          <div class="rec-saving">
+            <mat-icon aria-hidden="true">savings</mat-icon>
+            <span>Potential saving: <strong>{{ rec.potentialSaving }}</strong></span>
+          </div>
+        </article>
+      </div>
+
+      <div *ngIf="activeTab==='actions'" class="rec-list" role="list">
+        <article
+          *ngFor="let rec of longTermActions"
+          class="rec-card card animate-fade-in"
+          role="listitem"
+          [style.border-left-color]="getPriorityColor(rec.priority)"
+        >
+          <div class="rec-header">
+            <span class="rec-icon" aria-hidden="true">{{ rec.icon }}</span>
+            <div class="rec-meta">
+              <span class="rec-title">{{ rec.title }}</span>
+              <span class="rec-type badge badge-info">Long-term Change</span>
+            </div>
+          </div>
+          <p class="rec-desc">{{ rec.description }}</p>
+          <div class="rec-saving">
+            <mat-icon aria-hidden="true">savings</mat-icon>
+            <span>Potential saving: <strong>{{ rec.potentialSaving }}</strong></span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- Improvement Actions -->
+    <div class="card actions-section" *ngIf="data.improvementActions?.length">
+      <h2>🎯 Top Actions for {{ data.topEmissionSource | titlecase }}</h2>
+      <ul class="actions-list" role="list">
+        <li *ngFor="let action of data.improvementActions; let i = index" class="action-item" role="listitem">
+          <span class="action-number" aria-hidden="true">{{ i + 1 }}</span>
+          <span>{{ action }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Empty State -->
+    <app-empty-state
+      *ngIf="!data.recommendations?.length"
+      icon="auto_awesome"
+      title="Log Activities First"
+      message="The AI needs at least a few activity logs to generate personalized recommendations."
+      actionLabel="Log Activity"
+      actionRoute="/activity-log"
+    ></app-empty-state>
+
+  </div>
+</section>

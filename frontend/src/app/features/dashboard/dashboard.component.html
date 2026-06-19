@@ -1,0 +1,142 @@
+<section class="dashboard" aria-label="Carbon footprint dashboard">
+
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="loading" message="Loading your dashboard..."></app-loading-spinner>
+
+  <!-- Error State -->
+  <div *ngIf="!loading && error" class="error-banner" role="alert" aria-live="polite">
+    <mat-icon aria-hidden="true">error_outline</mat-icon>
+    <span>{{ error }}</span>
+    <button mat-button (click)="loadDashboard()" aria-label="Retry loading dashboard">Retry</button>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading && data" class="dashboard-content animate-fade-in">
+
+    <!-- ─── KPI Cards ───────────────────────────────────────────── -->
+    <section class="kpi-section" aria-label="Key performance indicators">
+      <div class="grid-4">
+        <app-kpi-card
+          [kpi]="data.kpis.today"
+          accent="#40c4ff"
+          icon="today"
+          aria-label="Today's carbon footprint"
+        ></app-kpi-card>
+        <app-kpi-card
+          [kpi]="data.kpis.thisWeek"
+          accent="#69f0ae"
+          icon="calendar_view_week"
+          aria-label="This week's carbon footprint"
+        ></app-kpi-card>
+        <app-kpi-card
+          [kpi]="data.kpis.thisMonth"
+          accent="#ffd740"
+          icon="calendar_month"
+          aria-label="This month's carbon footprint"
+        ></app-kpi-card>
+        <app-kpi-card
+          [kpi]="data.kpis.vsGlobalAvg"
+          [invertTrend]="true"
+          accent="#b388ff"
+          icon="public"
+          aria-label="Carbon footprint vs global average"
+        ></app-kpi-card>
+      </div>
+    </section>
+
+    <!-- ─── Main Charts Row ────────────────────────────────────── -->
+    <section class="charts-row" aria-label="Carbon footprint charts">
+      <div class="chart-primary">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">30-Day Trend</h2>
+            <span class="badge badge-info" aria-label="Daily tracking chart">Daily</span>
+          </div>
+          <app-trend-chart [data]="data.trendChart" aria-label="Line chart showing daily carbon footprint over 30 days"></app-trend-chart>
+        </div>
+      </div>
+
+      <div class="chart-secondary">
+        <!-- Carbon Score -->
+        <div class="card score-card" aria-label="Sustainability score">
+          <h2 class="card-title">Eco Score</h2>
+          <app-carbon-gauge
+            [score]="data.score"
+            [label]="data.scoreLabel"
+            [color]="data.scoreColor"
+          ></app-carbon-gauge>
+          <p class="score-message" aria-live="polite">
+            {{ data.score >= 70 ? '🌿 Great work! Keep it up.' : data.score >= 50 ? '💡 Room to improve' : '⚠️ Take action now' }}
+          </p>
+        </div>
+
+        <!-- Goal Progress -->
+        <div class="card" *ngIf="data.goalProgress" aria-label="Daily goal progress">
+          <h2 class="card-title">Daily Goal</h2>
+          <div class="goal-info">
+            <span class="goal-current" [style.color]="data.scoreColor">
+              {{ data.goalProgress.current | number:'1.1-1' }} kg
+            </span>
+            <span class="goal-target">/ {{ data.goalProgress.target }} kg CO₂e</span>
+          </div>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="data.goalProgress.percentage"
+            [color]="data.goalProgress.percentage > 100 ? 'warn' : 'accent'"
+            aria-label="Goal progress"
+            [attr.aria-valuenow]="data.goalProgress.percentage"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          ></mat-progress-bar>
+          <p class="goal-label">{{ data.goalProgress.percentage }}% of daily target</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Category Breakdown ────────────────────────────────── -->
+    <section *ngIf="data.categoryBreakdown?.length" class="breakdown-section" aria-label="Emissions by category">
+      <div class="card">
+        <h2 class="card-title">This Month's Breakdown</h2>
+        <div class="breakdown-list" role="list">
+          <div
+            *ngFor="let cat of data.categoryBreakdown"
+            class="breakdown-item"
+            role="listitem"
+            [attr.aria-label]="cat.type + ': ' + cat.co2e + ' kg CO₂e, ' + cat.percentage + '% of total'"
+          >
+            <div class="breakdown-left">
+              <span class="cat-icon" aria-hidden="true">{{ categoryIcons[cat.type] }}</span>
+              <span class="cat-label" [class]="'cat-' + cat.type">{{ cat.type | titlecase }}</span>
+            </div>
+            <div class="breakdown-bar-wrapper">
+              <div
+                class="breakdown-bar"
+                [class]="'cat-bg-' + cat.type"
+                [style.width.%]="cat.percentage"
+                role="progressbar"
+                [attr.aria-valuenow]="cat.percentage"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+            <div class="breakdown-right">
+              <span class="breakdown-value">{{ cat.co2e | number:'1.1-1' }} kg</span>
+              <span class="breakdown-pct">{{ cat.percentage }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Empty State ────────────────────────────────────────── -->
+    <app-empty-state
+      *ngIf="!data.recentActivities"
+      icon="eco"
+      title="Start Tracking Today"
+      message="Log your first activity to see your carbon footprint dashboard come alive."
+      actionLabel="Log Activity"
+      actionRoute="/activity-log"
+    ></app-empty-state>
+
+  </div>
+</section>

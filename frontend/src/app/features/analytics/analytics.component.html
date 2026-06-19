@@ -1,0 +1,181 @@
+<section class="analytics-page" aria-label="Carbon footprint analytics and reporting">
+  <app-loading-spinner *ngIf="loading" message="Compiling analytics report..."></app-loading-spinner>
+
+  <div *ngIf="error && !loading" class="card error-card animate-fade-in" role="alert">
+    <mat-icon class="error-icon">error</mat-icon>
+    <div class="error-content">
+      <h3>Error Compiling Analytics</h3>
+      <p>{{ error }}</p>
+      <button class="btn-eco" (click)="loadData()">Try Again</button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && data" class="analytics-content animate-fade-in">
+    <!-- Header Block -->
+    <div class="analytics-header">
+      <div>
+        <h1>📊 Carbon Footprint Analytics</h1>
+        <p class="period-subtitle">
+          Reporting period: {{ data.period.start | date:'mediumDate' }} – {{ data.period.end | date:'mediumDate' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- ─── Analytics Main Grid ─────────────────────────────────── -->
+    <div class="analytics-grid">
+      <!-- ─── Left Column ─── -->
+      <div class="analytics-left">
+        <!-- Breakdown Card -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Category Breakdown</h3>
+            <div class="period-toggle" role="group" aria-label="Filter category breakdown period">
+              <button
+                class="toggle-btn"
+                [class.active]="activeBreakdownPeriod === 'week'"
+                (click)="setBreakdownPeriod('week')"
+              >
+                7d
+              </button>
+              <button
+                class="toggle-btn"
+                [class.active]="activeBreakdownPeriod === 'month'"
+                (click)="setBreakdownPeriod('month')"
+              >
+                30d
+              </button>
+            </div>
+          </div>
+          <p class="chart-summary">
+            Total footprint: <strong>{{ totalCo2e | number:'1.0-1' }} kg CO₂e</strong>
+          </p>
+
+          <div class="doughnut-container">
+            <canvas
+              *ngIf="totalCo2e > 0"
+              baseChart
+              [data]="doughnutChartData"
+              [options]="doughnutChartOptions"
+              [type]="'doughnut'"
+            ></canvas>
+            <div *ngIf="totalCo2e === 0" class="no-chart-data">
+              <mat-icon>analytics</mat-icon>
+              <p>No activity logged during this period</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Goal Card -->
+        <div class="card goal-card">
+          <div class="goal-header">
+            <mat-icon class="goal-icon">track_changes</mat-icon>
+            <div>
+              <h3>Daily Target Carbon Budget</h3>
+              <p class="goal-subtitle">Set a threshold to regulate daily emissions</p>
+            </div>
+          </div>
+
+          <div class="goal-status-display" *ngIf="goal">
+            <span class="goal-label">Current target:</span>
+            <span class="goal-value">{{ goal.target_kg_per_day }} kg CO₂e / day</span>
+          </div>
+          <div class="goal-status-display no-goal" *ngIf="!goal">
+            <span>No daily goal set yet. Add one below!</span>
+          </div>
+
+          <div class="goal-input-row">
+            <mat-form-field appearance="outline" class="goal-field">
+              <mat-label>Target Limit (kg/day)</mat-label>
+              <input
+                matInput
+                type="number"
+                min="0.1"
+                max="50"
+                step="0.5"
+                [(ngModel)]="goalInput"
+                placeholder="e.g., 10.0"
+                aria-label="Target carbon limit in kilograms per day"
+              />
+              <span matSuffix>kg</span>
+            </mat-form-field>
+            <button
+              class="btn-eco"
+              [disabled]="updatingGoal || !goalInput || goalInput <= 0"
+              (click)="saveGoal()"
+            >
+              {{ updatingGoal ? 'Saving...' : 'Save Goal' }}
+            </button>
+          </div>
+
+          <div class="success-message alert-success" *ngIf="goalSuccess">
+            <mat-icon>check_circle</mat-icon>
+            <span>Goal updated successfully!</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Right Column ─── -->
+      <div class="analytics-right">
+        <!-- Weekly Trend Card -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Weekly Emission Trend</h3>
+          </div>
+          <p class="chart-summary">Compare emissions week over week</p>
+
+          <div class="bar-chart-container">
+            <canvas
+              *ngIf="data.weeklyTrend?.length"
+              baseChart
+              [data]="barChartData"
+              [options]="barChartOptions"
+              [type]="'bar'"
+            ></canvas>
+            <div *ngIf="!data.weeklyTrend?.length" class="no-chart-data">
+              <mat-icon>insights</mat-icon>
+              <p>Not enough data to display weekly trend</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subtype Breakdown List -->
+        <div class="card sub-types-card">
+          <h3>Top Emission Sub-activities</h3>
+          <p class="subtitle">Detailed breakdown of specific sub-categories (last 30 days)</p>
+
+          <div class="subtype-list" *ngIf="data.subTypeBreakdown?.length">
+            <div *ngFor="let item of data.subTypeBreakdown" class="subtype-item">
+              <div class="subtype-meta">
+                <div class="subtype-name-container">
+                  <span class="cat-dot" [style.background]="getCategoryColor(item.type)"></span>
+                  <span class="subtype-name">{{ item.sub_type | titlecase }}</span>
+                  <span class="subtype-type-label">({{ item.type }})</span>
+                </div>
+                <span class="subtype-value">{{ item.total_co2e | number:'1.0-1' }} kg</span>
+              </div>
+              <div class="subtype-progress-bar-bg">
+                <div
+                  class="subtype-progress-bar-fill"
+                  [style.width.%]="(item.total_co2e / (data.subTypeBreakdown[0].total_co2e || 1)) * 100"
+                  [style.background]="getCategoryColor(item.type)"
+                ></div>
+              </div>
+              <div class="subtype-footer">
+                <span>{{ item.count }} times logged</span>
+              </div>
+            </div>
+          </div>
+
+          <app-empty-state
+            *ngIf="!data.subTypeBreakdown?.length"
+            icon="eco"
+            title="No Sub-activities Yet"
+            message="Detailed activities breakdown will appear once you log your transport, energy use, or food."
+            actionLabel="Go to Log"
+            actionRoute="/activity-log"
+          ></app-empty-state>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

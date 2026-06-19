@@ -1,0 +1,104 @@
+<section class="activity-log" aria-label="Activity log">
+
+  <!-- ─── Header Row ─────────────────────────────────────────── -->
+  <div class="log-header">
+    <div>
+      <p class="log-count" aria-live="polite">{{ total }} activities logged</p>
+    </div>
+    <button
+      mat-raised-button
+      color="accent"
+      (click)="showForm = !showForm"
+      [attr.aria-expanded]="showForm"
+      aria-controls="activity-form-panel"
+      class="add-btn"
+    >
+      <mat-icon aria-hidden="true">{{ showForm ? 'close' : 'add' }}</mat-icon>
+      {{ showForm ? 'Cancel' : 'Log Activity' }}
+    </button>
+  </div>
+
+  <!-- ─── Activity Form ──────────────────────────────────────── -->
+  <div
+    id="activity-form-panel"
+    *ngIf="showForm"
+    class="form-panel animate-fade-in"
+    role="region"
+    aria-label="Log new activity"
+  >
+    <app-activity-form (activityCreated)="onActivityCreated()"></app-activity-form>
+  </div>
+
+  <!-- ─── Filters ────────────────────────────────────────────── -->
+  <div class="filters" role="group" aria-label="Filter activities by type">
+    <button
+      *ngFor="let f of filters"
+      class="filter-btn"
+      [class.active]="activeFilter === f.value"
+      (click)="setFilter(f.value)"
+      [attr.aria-pressed]="activeFilter === f.value"
+      [attr.aria-label]="'Filter: ' + f.label"
+    >
+      <mat-icon aria-hidden="true">{{ f.icon }}</mat-icon>
+      {{ f.label }}
+    </button>
+  </div>
+
+  <!-- ─── Loading ────────────────────────────────────────────── -->
+  <app-loading-spinner *ngIf="loading" message="Loading activities..."></app-loading-spinner>
+
+  <!-- ─── Empty State ────────────────────────────────────────── -->
+  <app-empty-state
+    *ngIf="!loading && !activities.length"
+    icon="edit_note"
+    title="No Activities Yet"
+    message="Start logging your daily activities to track your carbon footprint."
+  ></app-empty-state>
+
+  <!-- ─── Activity List ──────────────────────────────────────── -->
+  <div *ngIf="!loading && activities.length" class="activity-list" role="list" aria-label="Activity entries">
+    <article
+      *ngFor="let activity of activities"
+      class="activity-item card animate-fade-in"
+      role="listitem"
+      [attr.aria-label]="activity.sub_type + ' on ' + activity.date + ': ' + activity.co2e + ' kg CO₂e'"
+    >
+      <div class="activity-icon-col">
+        <div class="activity-icon-wrap" [class]="getCategoryBg(activity.type)">
+          <span class="cat-emoji" aria-hidden="true">{{ getCategoryIcon(activity.type) }}</span>
+        </div>
+      </div>
+
+      <div class="activity-details">
+        <div class="activity-name" [class]="getCategoryClass(activity.type)">
+          {{ formatSubType(activity.sub_type) }}
+        </div>
+        <div class="activity-meta">
+          <span>{{ activity.value }} {{ activity.unit }}</span>
+          <span class="dot" aria-hidden="true">·</span>
+          <span>{{ activity.date }}</span>
+          <span *ngIf="activity.notes" class="dot" aria-hidden="true">·</span>
+          <span *ngIf="activity.notes" class="activity-notes">{{ activity.notes }}</span>
+        </div>
+      </div>
+
+      <div class="activity-co2e">
+        <span class="co2e-value" [class]="getCategoryClass(activity.type)">
+          {{ activity.co2e | number:'1.2-2' }}
+        </span>
+        <span class="co2e-unit">kg CO₂e</span>
+      </div>
+
+      <button
+        mat-icon-button
+        (click)="deleteActivity(activity.id)"
+        [attr.aria-label]="'Delete activity: ' + activity.sub_type"
+        class="delete-btn"
+        matTooltip="Delete"
+      >
+        <mat-icon aria-hidden="true">delete_outline</mat-icon>
+      </button>
+    </article>
+  </div>
+
+</section>
